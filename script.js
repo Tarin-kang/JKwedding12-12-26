@@ -512,7 +512,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ── 7. RSVP & Wishes Wall (Validation & Loading & Feedback) ──
+    // ── 7. RSVP & Wishes Wall (Validation & Loading & Google Sheets Integration) ──
+    const GOOGLE_SHEETS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz6KfpruBTBZZoVP0UxI7DFOwp98XS_1OcKCdRGg8QbJS6__wk49uwKG52mPTuj3MCrAA/exec';
+
     const rsvpForm = document.getElementById('rsvpForm');
     const rsvpSubmitBtn = document.getElementById('rsvpSubmitBtn');
     const rsvpSuccessCard = document.getElementById('rsvpSuccessCard');
@@ -524,8 +526,13 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
 
             const nameInput = document.getElementById('guestName') || document.getElementById('name');
+            const countInput = document.getElementById('guestCount');
+            const attendInput = document.getElementById('attendance');
             const msgInput = document.getElementById('wishesMsg') || document.getElementById('msg');
+            
             const nameVal = nameInput ? nameInput.value.trim() : '';
+            const countVal = countInput ? countInput.value : '1';
+            const attendVal = attendInput ? (attendInput.value === 'yes' ? 'มาร่วมงานด้วยความยินดี' : 'ติดภารกิจ ไม่สามารถมาร่วมงานได้') : '';
             const msgVal = msgInput ? msgInput.value.trim() : '';
 
             // Required Name Validation Notice
@@ -538,8 +545,17 @@ document.addEventListener('DOMContentLoaded', () => {
             // Disable submit button & show loading state
             if (rsvpSubmitBtn) {
                 rsvpSubmitBtn.disabled = true;
-                rsvpSubmitBtn.textContent = 'กำลังส่งข้อมูล... 💌';
+                rsvpSubmitBtn.textContent = 'กำลังบันทึกข้อมูล... 💌';
             }
+
+            // Prepare Form Data for Google Sheet
+            const formData = {
+                timestamp: new Date().toLocaleString('th-TH'),
+                name: nameVal,
+                guests: countVal,
+                attendance: attendVal,
+                wishes: msgVal || '-'
+            };
 
             // Prepend wish to Wishes Wall immediately with XSS protection
             if (wishesList && nameVal) {
@@ -550,6 +566,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     <p class="wish-author">— ${escapeHtml(nameVal)}</p>
                 `;
                 wishesList.prepend(wishCard);
+            }
+
+            // Send Data to Google Sheets via Fetch API
+            if (GOOGLE_SHEETS_SCRIPT_URL && GOOGLE_SHEETS_SCRIPT_URL.startsWith('http')) {
+                fetch(GOOGLE_SHEETS_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                }).catch(err => console.log('Google Sheets submit notice:', err));
             }
 
             setTimeout(() => {
